@@ -1,0 +1,18 @@
+KHO XÁC MINH CA LÀM – V3
+
+1. Tạo project Supabase.
+2. Mở SQL Editor và chạy toàn bộ file supabase-setup.sql.
+3. Vào Settings > API Keys, lấy Project URL và Publishable Key.
+4. Mở index.html bằng trình soạn thảo.
+5. Tìm:
+   DAN_URL_SUPABASE_VAO_DAY
+   DAN_PUBLISHABLE_KEY_VAO_DAY
+   rồi thay bằng thông tin project của bạn.
+6. Đưa index.html lên GitHub Pages.
+
+Sau khi hoàn tất, điện thoại/máy tính nào mở cùng GitHub Pages đều đọc dữ liệu từ cùng database online.
+
+LƯU Ý: Prototype hiện dùng policy công khai để đơn giản hóa việc test nhiều máy. Nếu app chứa dữ liệu riêng tư, nên thêm đăng nhập và RLS theo tài khoản trước khi dùng chính thức.
+
+Nút 🗓️ App chấm công đã trỏ tới:
+https://truongle47761-beep.github.io/readyfinal/

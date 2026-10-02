@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kho xác minh ca làm – V3</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#fff7fa;color:#333}
+header{background:linear-gradient(135deg,#f7a8c4,#fbc9d9);color:#fff;padding:22px 16px;border-radius:0 0 24px 24px}
+.wrap{max-width:900px;margin:auto;padding:12px}h1{margin:0 0 5px;font-size:23px}.sub{font-size:13px;opacity:.9}
+.card{background:#fff;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 4px 18px #0001}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{background:#fff0f5;border-radius:14px;padding:14px}.stat b{display:block;font-size:20px;margin-top:5px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;font-size:13px;color:#666;margin:9px 0}
+input,select,textarea{width:100%;padding:11px;border:1px solid #ead5dd;border-radius:10px;margin-top:5px;font-size:14px}
+button,.btn{border:0;border-radius:12px;padding:11px 14px;cursor:pointer;text-decoration:none;display:inline-block;font-size:14px}
+.primary{background:#ef91b2;color:#fff}.soft{background:#ffe4ed;color:#984762}.danger{background:#ffe0e0;color:#a33}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.shift{border:1px solid #f0dce4;border-radius:15px;padding:13px;margin:9px 0}
+.shift h3{margin:0 0 6px;font-size:16px}.muted{color:#777;font-size:13px}.status{font-size:12px}
+.photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.photos img{width:75px;height:75px;object-fit:cover;border-radius:9px}
+nav{position:sticky;bottom:8px;background:#fff;border:1px solid #f0dce4;border-radius:18px;padding:7px;display:flex;gap:5px}nav>*{flex:1;text-align:center}
+section{display:none}section.active{display:block}.ok{color:#18804b}.warn{color:#ad6b00}
+@media(max-width:550px){.grid{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}nav{overflow:auto}nav>*{min-width:95px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>📸 Kho xác minh ca làm</h1><div class="sub">V3 · dữ liệu online dùng chung nhiều máy</div></div></header>
+<main class="wrap">
+<section id="home" class="active">
+<div class="card"><b>☁️ Trạng thái đồng bộ:</b> <span id="cloudStatus" class="warn">Chưa cấu hình</span><p class="muted">Sau khi cấu hình Supabase, mọi máy mở cùng app sẽ dùng chung dữ liệu online.</p></div>
+<div class="grid"><div class="stat">📅 Ca<b id="count">0</b></div><div class="stat">⏱️ Giờ<b id="hours">0</b></div><div class="stat">💰 Tiền<b id="money">0 ₫</b></div></div>
+<div class="card"><div class="actions"><button class="primary" onclick="show('add')">➕ Thêm ca</button><button class="soft" onclick="show('calendar');loadShifts()">📅 Xem ca</button><a class="btn soft" target="_blank" href="https://truongle47761-beep.github.io/readyfinal/">🗓️ App chấm công</a></div></div>
+</section>
+
+<section id="add"><div class="card">
+<h2 id="formTitle">➕ Thêm ca</h2><input type="hidden" id="editId">
+<label>Ngày<input id="date" type="date"></label>
+<div class="row"><label>Giờ vào<input id="start" type="time"></label><label>Giờ ra<input id="end" type="time"></label></div>
+<div class="row"><label>Công việc<input id="job" value="LaniTea"></label><label>Mức lương ₫/giờ<input id="rate" type="number" value="20000"></label></div>
+<label>Trạng thái<select id="status"><option>Chưa xác minh</option><option>Đã xác minh</option></select></label>
+<label>Ghi chú<textarea id="note" rows="3"></textarea></label>
+<div class="row"><label>📸 Ảnh đầu ca<input id="before" type="file" accept="image/*" multiple></label><label>📸 Ảnh cuối ca<input id="after" type="file" accept="image/*" multiple></label></div>
+<div class="actions"><button class="primary" onclick="saveShift()">☁️ Lưu online</button><button class="soft" onclick="show('home')">Hủy</button></div>
+</div></section>
+
+<section id="calendar"><div class="card"><h2>📅 Dữ liệu dùng chung</h2><div class="row"><label>Tháng<input id="monthFilter" type="month" onchange="render()"></label><label>Công việc<input id="filter" oninput="render()" placeholder="Tất cả"></label></div><div id="list"></div></div></section>
+</main>
+<nav class="wrap"><button class="soft" onclick="show('home')">🏠 Tổng quan</button><button class="soft" onclick="show('calendar');loadShifts()">📅 Xem ca</button><button class="primary" onclick="resetForm();show('add')">➕ Thêm ca</button><a class="btn soft" target="_blank" href="https://truongle47761-beep.github.io/readyfinal/">🗓️ Chấm công</a></nav>
+
+<script>
+const SUPABASE_URL="DAN_URL_SUPABASE_VAO_DAY";
+const SUPABASE_KEY="DAN_PUBLISHABLE_KEY_VAO_DAY";
+let db=null,shifts=[];
+if(SUPABASE_URL.startsWith("http")&&!SUPABASE_KEY.startsWith("DAN_")){
+ db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+ cloudStatus.textContent="Đã cấu hình";cloudStatus.className="ok";
+ loadShifts();
+}else{cloudStatus.textContent="Cần cấu hình Supabase";cloudStatus.className="warn"}
+
+function show(id){document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");if(id==="calendar")render()}
+function mins(a,b){let [h,m]=a.split(":").map(Number),[x,y]=b.split(":").map(Number);let s=h*60+m,e=x*60+y;if(e<s)e+=1440;return e-s}
+function hours(a,b){return mins(a,b)/60}
+function money(n){return new Intl.NumberFormat("vi-VN").format(Math.round(n))+" ₫"}
+async function loadShifts(){
+ if(!db){alert("Hãy cấu hình Supabase trước.");return}
+ let {data,error}=await db.from("work_shifts").select("*").order("work_date",{ascending:false}).order("start_time",{ascending:false});
+ if(error){alert("Lỗi tải dữ liệu: "+error.message);return}
+ shifts=data||[];render();stats();
+}
+function filesToBase64(files){return Promise.all([...files].map(f=>new Promise(r=>{let x=new FileReader();x.onload=()=>r(x.result);x.readAsDataURL(f)})))}
+async function saveShift(){
+ if(!db){alert("Chưa cấu hình Supabase.");return}
+ if(!date.value||!start.value||!end.value){alert("Nhập ngày và giờ.");return}
+ let beforeImgs=await filesToBase64(before.files),afterImgs=await filesToBase64(after.files);
+ let payload={work_date:date.value,start_time:start.value,end_time:end.value,job:job.value||"Khác",rate:Number(rate.value)||0,status:status.value,note:note.value||"",before_images:beforeImgs,after_images:afterImgs};
+ let id=editId.value;
+ let result=id?await db.from("work_shifts").update(payload).eq("id",id):await db.from("work_shifts").insert(payload);
+ if(result.error){alert("Không lưu được: "+result.error.message);return}
+ resetForm();await loadShifts();show("calendar");
+}
+function resetForm(){editId.value="";formTitle.textContent="➕ Thêm ca";date.value=new Date().toISOString().slice(0,10);start.value=end.value="";job.value="LaniTea";rate.value=20000;status.value="Chưa xác minh";note.value="";before.value=after.value=""}
+async function del(id){if(!confirm("Xóa ca này khỏi dữ liệu chung?"))return;let {error}=await db.from("work_shifts").delete().eq("id",id);if(error)alert(error.message);else loadShifts()}
+function edit(id){let x=shifts.find(a=>a.id===id);show("add");formTitle.textContent="✏️ Sửa ca";editId.value=x.id;date.value=x.work_date;start.value=x.start_time.slice(0,5);end.value=x.end_time.slice(0,5);job.value=x.job;rate.value=x.rate;status.value=x.status;note.value=x.note||""}
+function render(){let m=monthFilter.value,f=filter.value.trim().toLowerCase();let a=shifts.filter(x=>(!m||x.work_date.startsWith(m))&&(!f||x.job.toLowerCase().includes(f)));list.innerHTML=a.length?a.map(x=>`<div class="shift"><h3>${x.work_date} · ${x.start_time.slice(0,5)} → ${x.end_time.slice(0,5)}</h3><b>${esc(x.job)}</b> · ${hours(x.start_time.slice(0,5),x.end_time.slice(0,5)).toFixed(2)} giờ · ${money(hours(x.start_time.slice(0,5),x.end_time.slice(0,5))*x.rate)}<div class="muted">💰 ${money(x.rate)}/giờ · ${esc(x.status)}</div>${x.note?`<p>📝 ${esc(x.note)}</p>`:""}<div class="photos">${[...(x.before_images||[]),...(x.after_images||[])].map(p=>`<img src="${p}">`).join("")}</div><div class="actions"><button class="soft" onclick="edit('${x.id}')">✏️ Sửa</button><button class="danger" onclick="del('${x.id}')">🗑️ Xóa</button></div></div>`).join(""):"<p class='muted'>Chưa có dữ liệu.</p>"}
+function stats(){let h=shifts.reduce((s,x)=>s+hours(x.start_time.slice(0,5),x.end_time.slice(0,5)),0),m=shifts.reduce((s,x)=>s+hours(x.start_time.slice(0,5),x.end_time.slice(0,5))*x.rate,0);count.textContent=shifts.length;document.getElementById("hours").textContent=h.toFixed(2);document.getElementById("money").textContent=money(m)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+resetForm();
+</script>
+</body>
+</html>
